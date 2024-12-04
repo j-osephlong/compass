@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { useDeviceOrientation } from '@vueuse/core';
-import { onMounted, useTemplateRef, watch } from 'vue';
+import { computed, onMounted, useTemplateRef, watch } from 'vue';
 
 const orientation = useDeviceOrientation()
 
 const north = useTemplateRef("north")
 
-watch(orientation.alpha, () => {
+const alphaCorrected = computed(() => (360 - (orientation.alpha.value ?? 0)))
+
+watch(alphaCorrected, () => {
   if (north.value) {
-    north.value.style.rotate = `${(360 - (orientation.alpha.value ?? 0)).toFixed(2)}deg`
+    north.value.style.rotate = `${(360 - (alphaCorrected.value ?? 0)).toFixed(2)}deg`
   }
 }) 
 
@@ -35,7 +37,7 @@ function requestOrientationPermission(){
   </header>
 
   <main>
-    <h2>{{ (360 - orientation.alpha.value)?.toFixed(1) }}</h2>
+    <h2>{{ alphaCorrected?.toFixed(1) }}</h2>
     N
     <div id="north" ref="north">⬆️</div>
     S
