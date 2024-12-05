@@ -13,13 +13,50 @@ watch(direction, () => {
   }
 }) 
 
+/** Adapted from https://stackoverflow.com/a/21829819/5721675 */
+function compassHeading(alpha: number, beta: number, gamma: number) {
+
+  // Convert degrees to radians
+  const alphaRad = alpha * (Math.PI / 180);
+  const betaRad = beta * (Math.PI / 180);
+  const gammaRad = gamma * (Math.PI / 180);
+
+  // Calculate equation components
+  const cA = Math.cos(alphaRad);
+  const sA = Math.sin(alphaRad);
+  const cB = Math.cos(betaRad);
+  const sB = Math.sin(betaRad);
+  const cG = Math.cos(gammaRad);
+  const sG = Math.sin(gammaRad);
+
+  // Calculate A, B, C rotation components
+  const rA = - cA * sG - sA * sB * cG;
+  const rB = - sA * sG + cA * sB * cG;
+  const rC = - cB * cG;
+
+  // Calculate compass heading
+  let compassHeading = Math.atan(rA / rB);
+
+  // Convert from half unit circle to whole unit circle
+  if(rB < 0) {
+    compassHeading += Math.PI;
+  }else if(rA < 0) {
+    compassHeading += 2 * Math.PI;
+  }
+
+  // Convert radians to degrees
+  compassHeading *= 180 / Math.PI;
+
+  return compassHeading;
+
+}
+
 function addEvent() {
   window.addEventListener('deviceorientation', (e) => {
-      direction.value = 360 - (e.alpha ?? 0)
-      if ("webkitCompassHeading" in e) {
-        direction.value = e.webkitCompassHeading as number ?? 0
+      if (e.alpha && e.beta && e.gamma) {
+        direction.value = compassHeading(e.alpha, e.beta, e.gamma)
       }
-      lastEvent.value = JSON.stringify(e)
+      lastEvent.value = `Alpha: ${e.alpha?.toFixed(2)}\nBeta: ${e.beta?.toFixed(2)}\nGamma: ${e.gamma?.toFixed(2)}`
   })
 }
 
@@ -51,7 +88,7 @@ function requestOrientationPermission(){
     <div id="north" ref="north">⬆️</div>
     S
     <button style="margin-top: 1rem;" @click="requestOrientationPermission">Give Permissions</button>
-    <p>{{ lastEvent }}</p>
+    <p style="white-space: pre;">{{ lastEvent }}</p>
   </main>
 </template>
 
