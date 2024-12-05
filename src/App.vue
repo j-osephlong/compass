@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useDeviceOrientation } from '@vueuse/core';
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { ref, useTemplateRef, watch } from 'vue';
 
 const north = useTemplateRef("north")
 
@@ -13,51 +12,29 @@ watch(direction, () => {
   }
 }) 
 
-/** Adapted from https://stackoverflow.com/a/21829819/5721675 */
-function compassHeading(alpha: number, beta: number, gamma: number) {
+/**Listeners adapted from https://stackoverflow.com/a/75792197/5721675 */
+function addEvents() {
+  let absoluteListener = (e: DeviceOrientationEvent) => {
+    console.debug("ABS L")
+    if (!e.absolute || e.alpha == null || e.beta == null || e.gamma == null)
+      return;
+    let compass = -(e.alpha + e.beta * e.gamma / 90);
+    compass -= Math.floor(compass / 360) * 360; // Wrap into range [0,360].
+    window.removeEventListener("deviceorientation", webkitListener);
+    direction.value = compass
+  };
+  type WebkitDeviceOrientationEvent = DeviceOrientationEvent & { webkitCompassHeading: number }
+  let webkitListener = (e: DeviceOrientationEvent) => {
+    console.debug("WBK L")
 
-  // Convert degrees to radians
-  const alphaRad = alpha * (Math.PI / 180);
-  const betaRad = beta * (Math.PI / 180);
-  const gammaRad = gamma * (Math.PI / 180);
-
-  // Calculate equation components
-  const cA = Math.cos(alphaRad);
-  const sA = Math.sin(alphaRad);
-  const cB = Math.cos(betaRad);
-  const sB = Math.sin(betaRad);
-  const cG = Math.cos(gammaRad);
-  const sG = Math.sin(gammaRad);
-
-  // Calculate A, B, C rotation components
-  const rA = - cA * sG - sA * sB * cG;
-  const rB = - sA * sG + cA * sB * cG;
-  const rC = - cB * cG;
-
-  // Calculate compass heading
-  let compassHeading = Math.atan(rA / rB);
-
-  // Convert from half unit circle to whole unit circle
-  if(rB < 0) {
-    compassHeading += Math.PI;
-  }else if(rA < 0) {
-    compassHeading += 2 * Math.PI;
+    let compass = (e as WebkitDeviceOrientationEvent).webkitCompassHeading;
+    if (compass!=null && !isNaN(compass)) {
+      direction.value = compass
+      window.removeEventListener("deviceorientationabsolute", absoluteListener);
+    }
   }
-
-  // Convert radians to degrees
-  compassHeading *= 180 / Math.PI;
-
-  return compassHeading;
-
-}
-
-function addEvent() {
-  window.addEventListener('deviceorientation', (e) => {
-      if (e.alpha && e.beta && e.gamma) {
-        direction.value = compassHeading(e.alpha, e.beta, e.gamma)
-      }
-      lastEvent.value = `Alpha: ${e.alpha?.toFixed(2)}\nBeta: ${e.beta?.toFixed(2)}\nGamma: ${e.gamma?.toFixed(2)}`
-  })
+  window.addEventListener("deviceorientation", webkitListener);
+  window.addEventListener("deviceorientationabsolute", absoluteListener);
 }
 
 function requestOrientationPermission(){
@@ -66,12 +43,12 @@ function requestOrientationPermission(){
       DeviceOrientationEvent.requestPermission()
         .then((response: any) => {
             if (response == 'granted') {
-                addEvent()
+                addEvents()
             }
         })
         .catch(console.error)
     } else {
-      addEvent()
+      addEvents()
     }
 }
 
