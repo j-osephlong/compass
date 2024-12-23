@@ -8,7 +8,7 @@ const lastEvent = ref<string>()
 
 watch(direction, () => {
   if (north.value) {
-    north.value.style.rotate = `${(360 - (direction.value ?? 0)).toFixed(2)}deg`
+    north.value.style.rotate = `${direction.value?.toFixed(2)}deg`
   }
 }) 
 
